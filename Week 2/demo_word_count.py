@@ -1,16 +1,19 @@
+# demo_word_count.py
+# This script counts the number of words in each response and prints a summary of the results.
 import csv
 
 
-# Load the CSV file
+# Load the CSV file into a list of dictionaries
 filename = "demo_responses.csv"
 responses = []
 
+# Load the CSV file into a list of dictionaries
 with open(filename, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for row in reader:
         responses.append(row)
 
-
+# Function to count words in a response
 def count_words(response):
     """Count the number of words in a response string.
 
@@ -26,6 +29,7 @@ print("-" * 75)
 
 word_counts = []
 
+# Count words in each response and print a row-by-row summary
 for row in responses:
     participant = row["participant_id"]
     role = row["role"]
@@ -41,6 +45,7 @@ for row in responses:
     else:
         preview = response
 
+    # Print the results for this response
     print(f"{participant:<6} {role:<22} {count:<6} {preview}")
 
 # Print summary statistics
