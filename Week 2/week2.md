@@ -5,10 +5,10 @@
 For me, code literacy and documentation means being able to read a script well enough to explain what it does, change it when needed, and leave clear notes so someone else can follow it. As a UX researcher, that matters because I often collaborate with technical teammates without being a software engineer myself.
 
 In this class, I see four concrete parts of this competency:
-- inline comments that explain why a choice was made
-- docstrings that describe what a function takes, does, and returns
-- commit messages that explain what changed and why
-- markdown documentation that helps a non-technical reader understand the script
+- Inline comments that explain why a choice was made
+- Docstrings that describe what a function takes, does, and returns
+- Commit messages that explain what changed and why
+- Markdown documentation that helps a non-technical reader understand the script
 
 ## What I worked on this week
 
@@ -21,10 +21,10 @@ What helped most was having someone walk through it with me. Once I heard the lo
 ## What I can do now
 
 I now feel confident explaining each major section of the script:
-- data loading with `csv.DictReader`
-- the `count_words()` function and its purpose
-- the row-by-row loop that creates the output table
-- the final summary metrics (total, shortest, longest, average)
+- Data loading with `csv.DictReader`
+- The `count_words()` function and its purpose
+- The row-by-row loop that creates the output table
+- The final summary metrics (total, shortest, longest, average)
 
 The biggest shift is that I can now identify where to edit when requirements change. For example, I can see where to modify the counting rule, where to add another output field, or where to update file handling.
 
@@ -39,10 +39,10 @@ As a non-engineer, I need documentation that reduces guesswork. If I can run it 
 ## Evidence I can point to
 
 I can support this competency claim with concrete artifacts:
-- script comments that explain intent (not just mechanics)
-- a docstring on `count_words()` describing its purpose and return value
-- markdown reflections and context docs written for a non-technical audience
-- improved understanding of what a strong commit message should include
+- Script comments that explain intent (not just mechanics)
+- A docstring on `count_words()` describing its purpose and return value
+- Markdown reflections and context docs written for a non-technical audience
+- Improved understanding of what a strong commit message should include
 
 A strong message is specific about both the problem and the fix. For example:  
 "Fixed ValueError: added try/except to skip non-numeric experience_years values."
@@ -52,8 +52,8 @@ This is much better than vague messages like "update" or "fix."
 ## Where I still want to grow
 
 Two areas still feel important for me:
-- reading more complex scripts that are less linear than this one
-- becoming more fluent with Git collaboration workflows (staging, pushing, remote sync, and commit history interpretation)
+- Reading more complex scripts that are less linear than this one
+- Becoming more fluent with Git collaboration workflows (staging, pushing, remote sync, and commit history interpretation)
 
 ## Personal takeaway
 
