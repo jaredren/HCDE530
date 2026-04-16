@@ -1,68 +1,206 @@
 import csv
+from collections import Counter
+from pathlib import Path
 
-# Load the survey data from a CSV file
-filename = "week3_survey_messy.csv"
-rows = []
+def load_rows(csv_filename: str) -> list[dict[str, str]]:
+    """
+    What it does:
+        Loads survey rows from a CSV file in the same folder as this script.
+    What it takes:
+        csv_filename (str): The CSV file name to open.
+    What it returns:
+        list[dict[str, str]]: A list of CSV rows as dictionaries.
+    """
+    script_dir = Path(__file__).resolve().parent
+    csv_path = script_dir / csv_filename
 
-with open(filename, newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        rows.append(row)
+    with csv_path.open("r", newline="", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        return list(reader)
 
-# Count responses by role
-# Normalize role names so "ux researcher" and "UX Researcher" are counted together
-role_counts = {}
+def normalize_role(role_value: str) -> str:
+    """
+    What it does:
+        Normalizes a role value and applies an 'Unknown' fallback when empty.
+    What it takes:
+        role_value (str): The role text from a row.
+    What it returns:
+        str: A title-cased role label, or 'Unknown' when missing.
+    """
+    role_raw = (role_value or "").strip()
+    return role_raw.title() if role_raw else "Unknown"
 
-for row in rows:
-    role_raw = (row.get("role") or "").strip()
-    role = role_raw.title() if role_raw else "Unknown"
-    if role in role_counts:
-        role_counts[role] += 1
-    else:
-        role_counts[role] = 1
-
-print("Responses by role:")
-for role, count in sorted(role_counts.items()):
-    print(f"  {role}: {count}")
-
-# Calculate the average years of experience
-total_experience = 0
-valid_experience_count = 0
-unknown_experience_count = 0
-incorrect_experience_count = 0
-
-# Calculate the average years of experience
-for row in rows:
-    exp_raw = (row.get("experience_years") or "").strip()
+def parse_experience(experience_value: str) -> tuple[int | None, str]:
+    """
+    What it does:
+        Parses experience text and classifies it as known, unknown, or incorrect.
+    What it takes:
+        experience_value (str): The raw experience value from a row.
+    What it returns:
+        tuple[int | None, str]: (years, status) where years is an integer when known,
+        otherwise None, and status is 'known', 'unknown', or 'incorrect'.
+    """
+    exp_raw = (experience_value or "").strip()
     if exp_raw.isdigit():
-        total_experience += int(exp_raw)
-        valid_experience_count += 1
-    elif exp_raw == "":
-        unknown_experience_count += 1
+        return int(exp_raw), "known"
+    if exp_raw == "":
+        return None, "unknown"
+    return None, "incorrect"
+
+def clean_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    """
+    What it does:
+        Cleans each survey row for consistent role and experience values.
+    What it takes:
+        rows (list[dict[str, str]]): Survey row dictionaries loaded from CSV.
+    What it returns:
+        list[dict[str, str]]: A cleaned list of row dictionaries.
+    """
+    cleaned_rows: list[dict[str, str]] = []
+
+    for row in rows:
+        cleaned_row = dict(row)
+        cleaned_row["role"] = normalize_role(row.get("role", ""))
+        cleaned_row["participant_name"] = (
+            (row.get("participant_name") or "").strip() or "Unknown"
+        )
+
+        # Keep only numeric experience values; label others for data quality visibility.
+        years, status = parse_experience(row.get("experience_years", ""))
+        if status == "known" and years is not None:
+            cleaned_row["experience_years"] = str(years)
+            cleaned_row["experience_status"] = "known"
+        elif status == "unknown":
+            cleaned_row["experience_years"] = "Unknown"
+            cleaned_row["experience_status"] = "unknown"
+        else:
+            cleaned_row["experience_years"] = "Incorrect"
+            cleaned_row["experience_status"] = "incorrect"
+
+        cleaned_rows.append(cleaned_row)
+
+    return cleaned_rows
+
+
+def write_rows(csv_filename: str, rows: list[dict[str, str]]) -> None:
+    """
+    What it does:
+        Writes row dictionaries to a CSV file in the script folder.
+    What it takes:
+        csv_filename (str): The output CSV file name.
+        rows (list[dict[str, str]]): The rows to write.
+    What it returns:
+        None.
+    """
+    if not rows:
+        return
+
+    script_dir = Path(__file__).resolve().parent
+    output_path = script_dir / csv_filename
+    fieldnames = list(rows[0].keys())
+
+    with output_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def summarize_data(cleaned_rows: list[dict[str, str]]) -> str:
+    """
+    What it does:
+        Builds a plain-language summary, trend analysis, and text visuals.
+    What it takes:
+        cleaned_rows (list[dict[str, str]]): Cleaned rows, usually from clean_rows().
+    What it returns:
+        str: A multi-line summary with dataset stats, trends, and ASCII charts.
+    """
+    row_count = len(cleaned_rows)
+    role_counts = Counter(
+        (row.get("role") or "").strip() or "Unknown" for row in cleaned_rows
+    )
+    unique_roles = sorted(role_counts.keys())
+    unknown_name_count = sum(
+        1
+        for row in cleaned_rows
+        if (row.get("participant_name") or "").strip().lower() in {"", "unknown"}
+    )
+    tool_counts = Counter(
+        (row.get("primary_tool") or "").strip() or "Unknown" for row in cleaned_rows
+    )
+    experience_status_counts = Counter(
+        (row.get("experience_status") or "").strip() or "unknown" for row in cleaned_rows
+    )
+
+    roles_text = ", ".join(unique_roles) if unique_roles else "none"
+    if role_counts:
+        most_common_role, most_common_role_count = role_counts.most_common(1)[0]
+        most_common_role_text = f"{most_common_role} ({most_common_role_count})"
     else:
-        # Value exists but is not numeric, so treat it as incorrect data.
-        incorrect_experience_count += 1
+        most_common_role_text = "none (0)"
 
-if valid_experience_count > 0:
-    avg_experience = total_experience / valid_experience_count
-else:
-    avg_experience = 0
+    if tool_counts:
+        most_common_tool, most_common_tool_count = tool_counts.most_common(1)[0]
+        most_common_tool_text = f"{most_common_tool} ({most_common_tool_count})"
+    else:
+        most_common_tool_text = "none (0)"
 
-print(f"\nKnown experience rows: {valid_experience_count}")
-print(f"Unknown experience rows: {unknown_experience_count}")
-print(f"Incorrect experience rows: {incorrect_experience_count}")
-print(f"Average years of experience: {avg_experience:.1f}")
+    def build_bar_line(label: str, count: int, max_count: int) -> str:
+        """Create a scaled ASCII bar line for one category."""
+        bar_length = int((count / max_count) * 20) if max_count > 0 else 0
+        bar = "#" * bar_length
+        return f"- {label:20} | {bar} ({count})"
 
-# Find the top 5 highest satisfaction scores
-scored_rows = []
-for row in rows:
-    score_raw = (row.get("satisfaction_score") or "").strip()
-    if score_raw.isdigit():
-        scored_rows.append((row.get("participant_name", "Unknown"), int(score_raw)))
+    max_role_count = max(role_counts.values()) if role_counts else 0
+    role_bar_lines = [
+        build_bar_line(role, count, max_role_count)
+        for role, count in role_counts.most_common()
+    ]
 
-scored_rows.sort(key=lambda x: x[1], reverse=True)
-top5 = scored_rows[:5]
+    max_tool_count = max(tool_counts.values()) if tool_counts else 0
+    tool_bar_lines = [
+        build_bar_line(tool, count, max_tool_count)
+        for tool, count in tool_counts.most_common(5)
+    ]
 
-print("\nTop 5 satisfaction scores:")
-for name, score in top5:
-    print(f"  {name}: {score}")
+    known_experience = experience_status_counts.get("known", 0)
+    known_experience_pct = (known_experience / row_count * 100) if row_count else 0
+
+    summary_lines = [
+        f"The cleaned dataset has {row_count} rows.",
+        f"Unique roles are: {roles_text}.",
+        f"There are {unknown_name_count} empty or unknown name fields.",
+        "",
+        "Trend analysis:",
+        f"- Most common role: {most_common_role_text}",
+        f"- Most common primary tool: {most_common_tool_text}",
+        (
+            f"- Experience data quality: {known_experience} known rows "
+            f"({known_experience_pct:.1f}%)"
+        ),
+        "",
+        "Role distribution (text chart):",
+        *role_bar_lines,
+        "",
+        "Top tool distribution (text chart):",
+        *tool_bar_lines,
+    ]
+
+    return "\n".join(summary_lines)
+
+
+def main() -> None:
+    """
+    What it does:
+        Coordinates loading data, cleaning rows, and writing a new CSV file.
+    What it takes:
+        None.
+    What it returns:
+        None.
+    """
+    rows = load_rows("week3_survey_messy.csv")
+    cleaned_rows = clean_rows(rows)
+    write_rows("week3_survey_cleaned.csv", cleaned_rows)
+    print(summarize_data(cleaned_rows))
+
+if __name__ == "__main__":
+    main()
