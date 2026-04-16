@@ -56,8 +56,12 @@ def clean_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     What it returns:
         list[dict[str, str]]: A cleaned list of row dictionaries.
     """
+    # Cleaning means: fix role and name text, turn messy experience into either a number
+    # or clear labels (Unknown / Incorrect), and add experience_status for each row.
     cleaned_rows: list[dict[str, str]] = []
 
+    # Walk every survey response once; each time we copy the row, update the fields we care
+    # about, and save the cleaned copy to the list we will write out later.
     for row in rows:
         cleaned_row = dict(row)
         cleaned_row["role"] = normalize_role(row.get("role", ""))
@@ -77,6 +81,7 @@ def clean_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
             cleaned_row["experience_years"] = "Incorrect"
             cleaned_row["experience_status"] = "incorrect"
 
+        # After this row is fixed, add it to the cleaned list and move on to the next person.
         cleaned_rows.append(cleaned_row)
 
     return cleaned_rows
@@ -97,8 +102,11 @@ def write_rows(csv_filename: str, rows: list[dict[str, str]]) -> None:
 
     script_dir = Path(__file__).resolve().parent
     output_path = script_dir / csv_filename
+    # Column order comes from the first row: same headers as the messy file, plus any new
+    # columns we added (for example experience_status) appear in that order too.
     fieldnames = list(rows[0].keys())
 
+    # Write a brand-new CSV: first line is the header row, then one data row per person.
     with output_path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
@@ -114,6 +122,8 @@ def summarize_data(cleaned_rows: list[dict[str, str]]) -> str:
     What it returns:
         str: A multi-line summary with dataset stats, trends, and ASCII charts.
     """
+    # Scan the cleaned rows to tally roles, tools, missing names, and experience quality for
+    # the written summary (each Counter walks the full list once).
     row_count = len(cleaned_rows)
     role_counts = Counter(
         (row.get("role") or "").strip() or "Unknown" for row in cleaned_rows
@@ -199,6 +209,7 @@ def main() -> None:
     """
     rows = load_rows("week3_survey_messy.csv")
     cleaned_rows = clean_rows(rows)
+    # Saves week3_survey_cleaned.csv next to this script: full table of cleaned answers.
     write_rows("week3_survey_cleaned.csv", cleaned_rows)
     print(summarize_data(cleaned_rows))
 
