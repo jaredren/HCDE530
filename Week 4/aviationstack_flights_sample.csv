@@ -1,0 +1,11 @@
+flight_date,flight_status,airline,flight_iata,dep_airport,arr_airport
+2026-05-01,active,Skytrans Australia,QN736,QBS,CNS
+2026-04-30,scheduled,All Nippon Airways,NH467,HND,OKA
+2026-04-30,scheduled,FlyArystan,FS7928,TAS,NQZ
+2026-04-30,scheduled,FlyArystan,FS7331,ALA,NQZ
+2026-04-30,scheduled,QantasLink,,ASP,ADL
+2026-04-30,scheduled,Qantas,QF690,ADL,MEL
+2026-04-30,scheduled,Virgin Australia,VA429,ADL,SYD
+2026-04-30,scheduled,Qantas,QF1798,ADL,CBR
+2026-04-30,scheduled,Rex,ZL4388,ADL,PLO
+2026-04-30,scheduled,Qantas,QF2575,ADL,WYA
