@@ -1,0 +1,16 @@
+.DS_Store
+
+# Secrets and local env
+.env
+.env.local
+.env.*.local
+
+# Local virtual environment (optional)
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Editor / agent local settings (do not publish)
+settings.local.json

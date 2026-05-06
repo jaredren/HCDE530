@@ -1,0 +1,35 @@
+You are working in a course project repository.
+
+Project context:
+- Primary language: Python 3
+- Typical files: small scripts and CSV data files
+- Keep solutions beginner-friendly and readable
+
+Coding preferences:
+- Prefer clear, straightforward code over clever optimizations
+- Use descriptive variable and function names
+- Keep functions focused and short when practical
+- Add brief docstrings for non-trivial functions
+- Use comments sparingly and only where intent is not obvious
+
+Python style:
+- Follow PEP 8 conventions
+- Keep imports at the top of each file
+- Avoid adding new dependencies unless explicitly requested
+- Prefer standard library solutions first
+- Preserve UTF-8 handling for text and CSV files
+
+Data/file handling:
+- Use robust file paths (relative to script location) when reading local files
+- Do not modify source CSV files unless explicitly asked
+- Validate assumptions about column names before processing data
+
+Git/workflow safety:
+- Do not run destructive git commands
+- Never rewrite user changes outside requested scope
+- Keep edits minimal and targeted to the task
+
+Response behavior:
+- Explain changes briefly in plain language
+- Include exact run commands when relevant
+- If uncertain requirements exist, ask one focused clarification question

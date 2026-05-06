@@ -1,0 +1,4 @@
+# HCDE 530 A5 — chat analysis and collection
+pandas>=2.0
+google-api-python-client>=2.0
+yt-dlp>=2024.1
