@@ -1,46 +1,53 @@
-# demo_word_count.py
-# This script counts the number of words in each response and prints a summary of the results.
+"""Word-count summary for each row in a survey CSV.
+
+Reads ``demo_responses.csv`` from this script's folder (so it runs correctly
+no matter which directory you launch Python from), prints an aligned table,
+then aggregate stats over the same counts shown in that table.
+
+Run from anywhere::
+
+    python demo_word_count.py
+"""
+
 import csv
+from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+CSV_PATH = SCRIPT_DIR / "demo_responses.csv"
 
-filename = "demo_responses.csv"
 responses = []
 
-# We use DictReader so each row is like a mini phone book: keys are column names (easy to read in code).
-# newline="" is what Python’s csv docs ask for so the reader handles line breaks inside cells correctly.
-# encoding="utf-8" is a common choice for text files so special characters read correctly.
-with open(filename, newline="", encoding="utf-8") as f:
+# DictReader: each row is a dict keyed by column name (readable for non-authors of the file).
+# newline="" is what the csv module expects so quoted cells with line breaks parse correctly.
+with open(CSV_PATH, newline="", encoding="utf-8") as f:
     reader = csv.DictReader(f)
     for row in reader:
         responses.append(row)
 
 
 def count_words(response):
-    """Rough word count: split on spaces.
+    """Rough word count: split on whitespace.
 
-    Good enough for a class example. It won’t match a dictionary perfectly (for example,
-    “don’t” might count as one chunk), but it is simple and easy to understand.
+    Chosen for transparency in a learning example. A tokenizer or NLP library
+    would be more accurate for real analysis (e.g. contractions, hyphenation).
     """
     return len(response.split())
 
 
-# Padding the columns so the printed table lines up neatly when you run it in the terminal.
 print(f"{'ID':<6} {'Role':<22} {'Words':<6} {'Response (first 60 chars)'}")
 print("-" * 75)
 
 word_counts = []
 
-# We already loaded the rows above, so we loop that same list for the table and the numbers at the end.
 for row in responses:
     participant = row["participant_id"]
     role = row["role"]
     response = row["response"]
 
-    # A small function keeps “how we count words” in one spot if we want to change it later.
     count = count_words(response)
     word_counts.append(count)
 
-    # Only show the start of long answers so each line of output stays a manageable length.
+    # Short preview keeps each printed row to a predictable width in the terminal.
     if len(response) > 60:
         preview = response[:60] + "..."
     else:
@@ -48,7 +55,7 @@ for row in responses:
 
     print(f"{participant:<6} {role:<22} {count:<6} {preview}")
 
-# These stats use the same counts we just collected, so the summary matches the table above.
+# Aggregate stats read from ``word_counts`` so the summary matches the table exactly.
 print()
 print("── Summary ─────────────────────────────────")
 print(f"  Total responses : {len(word_counts)}")

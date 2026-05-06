@@ -12,11 +12,13 @@ In this class, I see four concrete parts of this competency:
 
 ## What I worked on this week
 
-This week I focused on understanding `demo_word_count.py`. My goal was not just to run it, but to understand the full flow from CSV file to printed summary. Honestly, I wanted to get to the point where I could explain it out loud without feeling lost.
+This week I focused on understanding and documenting `demo_word_count.py`. My goal was not just to run it, but to understand the full flow from CSV file to printed summary and to leave notes that explain *why* the script is structured the way it is—not only what each line does. Honestly, I wanted to get to the point where I could explain it out loud without feeling lost.
 
 The hardest part for me was seeing how the pieces connect end to end. I could understand individual lines, but it took longer to connect loading data, looping through rows, counting words, and computing summary statistics as one coherent process.
 
 What helped most was having someone walk through it with me. Once I heard the logic explained in plain language, I could go back to the code and see the structure more clearly. That turned it from "intimidating code" into something I could reason through step by step.
+
+On documentation, my first pass leaned on comments that repeated the mechanics ("here we append," "here we print"). I revised toward fewer, sharper notes: where we chose `DictReader` and `newline=""` for robust CSV handling, why word-counting uses a simple split for class clarity versus a heavier NLP approach, why response text is truncated in the table, and why the summary statistics pull from the same list as the rows above so the numbers cannot drift out of sync. I also resolved the CSV path relative to the script file so the program runs whether you start Python from the Week 2 folder or somewhere else—documentation is easier to trust when the script behaves predictably.
 
 ## What I can do now
 
@@ -39,8 +41,9 @@ As a non-engineer, I need documentation that reduces guesswork. If I can run it 
 ## Evidence I can point to
 
 I can support this competency claim with concrete artifacts:
-- Script comments that explain intent (not just mechanics)
-- A docstring on `count_words()` describing its purpose and return value
+- A module docstring at the top of `demo_word_count.py` that states purpose, names the input file, and gives a run command—so a reader knows how to execute it before reading implementation details
+- A few inline comments reserved for design choices (readable column access via `DictReader`, CSV newline handling, preview width for terminal output, keeping summary metrics tied to the same `word_counts` list as the table)
+- A function docstring on `count_words()` that names the tradeoff: simple splitting for transparency in a learning example versus more accurate tokenization for real analysis
 - Markdown reflections and context docs written for a non-technical audience
 - Improved understanding of what a strong commit message should include
 
