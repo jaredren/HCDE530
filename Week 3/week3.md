@@ -1,27 +1,61 @@
 ## Week 3 — Debugging messy CSV data
 
-I loaded real survey rows from `week3_survey_messy.csv` (not hardcoded lists), and when the script crashed I treated the traceback as a map: it pointed straight at `int(row["experience_years"])`, so I knew the bug was my assumption that every cell was a clean integer.
+I loaded real survey rows from `week3_survey_messy.csv` (not hardcoded lists). When the script crashed, I treated the traceback as a map: it pointed at `int(row["experience_years"])`, so I knew I had assumed every cell was a clean integer.
 
-The failure was `ValueError: invalid literal for int() with base 10: 'fifteen'`—one person wrote years as a word—so I changed my approach: I validate first, then only sum or store numeric years, and I label anything else as **Incorrect** or **Unknown** instead of forcing `int()` and blowing up the whole run.
+---
 
-After that I split the work into small functions (load → clean → write → summarize), saved a repeatable output file `week3_survey_cleaned.csv`, and printed a short report with role/tool trends and ASCII bars so I could sanity-check the dataset at a glance; I also wrote commits like a debug log so “what broke” and “what I changed” stay visible in history.
+### Bug 1 — `ValueError` on experience years (traceback-led)
 
-### What was actually broken (and what I did about it)
+**Symptom.** The run stopped with  
+`ValueError: invalid literal for int() with base 10: 'fifteen'`.
 
-**Experience years.** I was converting the column blindly. Fix: strip the string, accept only digits as “known,” treat empty as unknown, and treat word-y junk like `fifteen` as incorrect data—not a number, not silently dropped.
+**What was wrong.** One respondent wrote years as a word. Blind `int(...)` on that cell can never succeed.
 
-**Roles and names.** Some rows had empty `role` or missing `participant_name`, which made counts misleading (you’d see a blank category or lose track of who the row was for). Fix: normalize role text and use **Unknown** when a field is empty so the table stays honest.
+**Fix.** Validate before converting: strip the string, treat only all-digit values as known numeric years; treat empty as unknown; treat word-like or junk values as **Incorrect**, not as integers—so the pipeline finishes and the messy cell is visible in output instead of killing the run.
 
-**“Top” satisfaction (earlier version).** I had sorted ascending and grabbed the first five rows, which would highlight the *lowest* scores. Fix: sort descending so “top five” means what it sounds like.
+---
 
-**Messy editing on my side.** I briefly had duplicated blocks and code outside the loop—classic copy/paste damage—so the script failed before it even got to the real data issues. Fix: refactor into named steps so each bug has an obvious home and I’m not debugging three ideas in one pile.
+### Bug 2 — “Top 5” satisfaction showed the *lowest* scores (logic / sanity-check)
+
+This bug did not show up as a traceback; it showed up as **wrong meaning** in the printed summary.
+
+**What I expected.** A “top five” list by `satisfaction_score` should list the **highest** scores (e.g. 9s and 10s if the scale goes that high).
+
+**What I saw.** The five rows I printed had small satisfaction numbers compared to other rows in the CSV. The label said “top” but the numbers looked like the bottom of the distribution.
+
+**Root cause.** I had sorted the rows **ascending** by score (Python’s default sort order is smallest-to-largest), then took the **first** five rows. That slice is the five **lowest** scores, not the five highest.
+
+**How I verified.** I spot-checked a few `satisfaction_score` values in `week3_survey_messy.csv` against what my script called “top.” The mismatch only made sense once I walked the sort order in my head: first five after ascending sort = minimums.
+
+**Fix.** Sort **descending** by numeric satisfaction (parse scores as integers for ordering), then take the first five rows—or equivalently, sort ascending and take the **last** five. The important part is that the sort direction matches the English word “top.”
+
+---
+
+### Other data-quality fixes (smaller)
+
+**Roles and names.** Empty `role` or missing `participant_name` made counts misleading. I normalized role text and used **Unknown** when a field is empty so tables stay honest.
+
+**Structure.** I briefly had duplicated blocks and code outside the loop from messy editing. Refactoring into small steps (load → clean → write → summarize) gave each bug a clear place to live.
+
+---
 
 ### Why I added the pieces I did
 
-**Cleaned CSV output.** I wanted something I could open, compare to the messy file, and rerun the same way every time. A print-only script is harder to show as evidence and easier to “lose” mentally.
+**Cleaned CSV output.** I wanted a file I could open, compare to the messy source, and rerun the same way every time—more tangible than print-only output.
 
-**`experience_status` plus labels on bad cells.** I didn’t want to pretend bad input was a number; I wanted a visible flag so future me (or a grader) can see *where* the data is messy without rerunning mental archaeology.
+**`experience_status` and labels on bad cells.** I did not want to pretend bad input was a number; I wanted a visible flag so anyone can see where the data is messy without re-deriving it from a crash.
 
-**Summary + ASCII charts.** I can’t assume everyone will scroll a CSV, so the text summary is my quick narrative: counts, a couple of “most common” lines with numbers in parentheses, and simple `#` bars—no extra installs, but still a visual-ish read of the shape of the data.
+**Summary + ASCII charts.** A short text report with counts and `#` bars gives a quick sanity check without extra installs.
 
-**Commit messages.** I tried to write them like I was narrating a debug session: symptom, diagnosis, fix—because that’s the story I want the history to tell, not a vague “updated files.”
+---
+
+### Commits and documentation
+
+My main pipeline fix is in commit `071aebd` (“Fix Week 3 survey pipeline: handle messy data and make debugging visible”). That message describes **what the change accomplishes** in general terms; it does not spell out each defect in the one-line subject.
+
+**This write-up** is the detailed record of *what was broken* and *how I knew*. If I had split the work into smaller commits, I would have used **symptom-first** messages so history reads like a debug log, for example:
+
+- `Fix ValueError: experience_years contains 'fifteen', not an integer — parse defensively`
+- `Fix satisfaction "top 5": sort scores descending before slice (was ascending, showed lowest)`
+
+Those styles match how I actually diagnosed the issues: traceback text for the first bug, and comparing printed “top” scores to the raw CSV for the second.
