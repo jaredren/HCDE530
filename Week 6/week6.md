@@ -2,8 +2,6 @@
 
 **Name:** Jared Ren
 **Project:** YouTube Livestream Chat Analysis (LEC EMEA Championship VODs)
-**Notebook:** [link to your published notebook on GitHub]
-**Repository:** [link to your GitHub repo]
 
 ## C3 — Data Cleaning and File Handling
 
