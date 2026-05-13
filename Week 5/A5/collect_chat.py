@@ -23,12 +23,15 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from enrich_chat_csv import enrich_raw_csv_file
+
 # google-api-python-client is the official Google client library.
 # It handles authentication headers, retries, and response parsing for us.
 from googleapiclient.discovery import build
 
 HERE = Path(__file__).resolve().parent
-CSV_DIR = HERE / "csv"
+CSV_RAW_DIR = HERE / "csv" / "raw"
+CSV_CODED_DIR = HERE / "csv" / "coded"
 
 
 def load_env(path: Path) -> None:
@@ -135,20 +138,23 @@ def collect_messages(youtube, chat_id: str, max_pages: int) -> list[dict]:
 
 
 def save_csv(rows: list[dict], video_id: str) -> Path:
-    """Write collected rows to csv/ with a timestamp so multiple runs don't overwrite."""
-    CSV_DIR.mkdir(parents=True, exist_ok=True)
+    """Write raw rows to csv/raw/, then enrich into csv/coded/. Returns coded CSV path."""
+    CSV_RAW_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path  = CSV_DIR / f"chat_{video_id}_{timestamp}.csv"
+    filename = f"chat_{video_id}_{timestamp}.csv"
+    raw_path = CSV_RAW_DIR / filename
 
-    fieldnames = ["timestamp", "author_channel_id", "display_name",
-                  "message_text", "message_type", "super_chat_amount"]
+    raw_fields = [
+        "timestamp", "author_channel_id", "display_name", "message_text",
+        "message_type", "super_chat_amount",
+    ]
 
-    with out_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    with raw_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=raw_fields)
         writer.writeheader()
         writer.writerows(rows)
 
-    return out_path
+    return enrich_raw_csv_file(raw_path, CSV_CODED_DIR / filename)
 
 
 def main() -> None:

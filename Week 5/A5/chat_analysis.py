@@ -6,7 +6,7 @@ collected via yt-dlp. Each row is one chat message with a timestamp,
 stable author channel ID, display name, message text, message type
 (textMessageEvent or superChatEvent), and offset in seconds from stream start.
 
-CSV files are read automatically from csv/chat_<VIDEO_ID>.csv (every chat_*.csv present).
+CSV files are read automatically from csv/coded/chat_<VIDEO_ID>.csv (sentiment-enriched exports).
 
 Analytical questions answered:
   Q1. When during the stream was chat most active, and how dramatic were the spikes?
@@ -25,11 +25,11 @@ HERE = Path(__file__).resolve().parent
 # Load every processed chat CSV and tag each row with its video ID
 # ---------------------------------------------------------------------------
 
-CSV_DIR = HERE / "csv"
+CSV_DIR = HERE / "csv" / "coded"
 
 
 def discover_streams(csv_dir: Path) -> dict[str, Path]:
-    """Build stream_id -> path from csv/chat_<VIDEO_ID>.csv (matches collect_vod_chat output names)."""
+    """Build stream_id -> path from csv/coded/chat_<VIDEO_ID>.csv (matches collect_vod_chat output)."""
     out: dict[str, Path] = {}
     for path in sorted(csv_dir.glob("chat_*.csv")):
         stem = path.stem  # e.g. chat_oxUSw1N9i3k or chat__dE6Hddb8do (leading underscore in ID)

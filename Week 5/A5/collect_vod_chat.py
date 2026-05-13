@@ -15,17 +15,19 @@ Requirements:
     pip install yt-dlp
 
 Outputs:
-    json/chat_<video_id>.live_chat.json  — raw yt-dlp replay file
-    csv/chat_<video_id>.csv              — parsed rows for analysis
+    json/chat_<video_id>.live_chat.json  — raw yt-dlp replay (unchanged)
+    csv/raw/chat_<video_id>.csv          — parsed messages only (no sentiment)
+    csv/coded/chat_<video_id>.csv       — same rows + message_sentiment, message_summary
 
-Output CSV columns (same as collect_chat.py so chat_analysis.py works unchanged):
-    timestamp          — ISO 8601 wall-clock time of the message
-    author_channel_id  — stable channel ID (survives display name changes)
-    display_name       — display name at time of message
-    message_text       — chat message content
-    message_type       — "textMessageEvent" or "superChatEvent"
-    super_chat_amount  — e.g. "$5.00" (empty for normal messages)
-    video_offset_sec   — seconds into the stream when the message appeared
+Pipeline: JSON → parse rows → write csv/raw/ → enrich_chat_csv enriches → csv/coded/.
+
+Raw CSV columns (no sentiment):
+    timestamp, author_channel_id, display_name, message_text, message_type,
+    super_chat_amount, video_offset_sec
+
+Coded CSV adds:
+    message_sentiment  — rule-based label from message_coding.py
+    message_summary    — short coded summary of the message
 """
 
 import csv
@@ -35,9 +37,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from enrich_chat_csv import enrich_raw_csv_file
+
 HERE = Path(__file__).resolve().parent
 JSON_DIR = HERE / "json"
-CSV_DIR = HERE / "csv"
+CSV_RAW_DIR = HERE / "csv" / "raw"
+CSV_CODED_DIR = HERE / "csv" / "coded"
 
 
 def extract_video_id(raw: str) -> str:
@@ -92,11 +97,7 @@ def parse_text(runs: list) -> str:
 
 def parse_chat_json(json_path: Path) -> list[dict]:
     """
-    Parse yt-dlp's .live_chat.json format into clean row dicts.
-
-    Each line in the file is a JSON object with a 'replayChatItemAction' key.
-    Inside that is an 'actions' list; each action contains one renderer object
-    that describes the message type.
+    Parse yt-dlp's .live_chat.json format into clean row dicts (no sentiment fields).
 
     Renderer types we handle:
         liveChatTextMessageRenderer  — normal chat message
@@ -117,51 +118,51 @@ def parse_chat_json(json_path: Path) -> list[dict]:
                 continue
 
             replay = obj.get("replayChatItemAction", {})
-            # videoOffsetTimeMsec is how far into the stream this message appeared
-            offset_ms  = int(replay.get("videoOffsetTimeMsec", 0) or 0)
+            offset_ms = int(replay.get("videoOffsetTimeMsec", 0) or 0)
             offset_sec = offset_ms / 1000
 
             for action in replay.get("actions", []):
                 item = action.get("addChatItemAction", {}).get("item", {})
 
-                # --- Normal text message ---
                 renderer = item.get("liveChatTextMessageRenderer")
                 if renderer:
                     ts_usec = int(renderer.get("timestampUsec", 0) or 0)
-                    ts_dt   = datetime.fromtimestamp(ts_usec / 1_000_000, tz=timezone.utc)
+                    ts_dt = datetime.fromtimestamp(ts_usec / 1_000_000, tz=timezone.utc)
+                    message_text = parse_text(renderer.get("message", {}).get("runs", []))
                     rows.append({
-                        "timestamp":         ts_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                        "timestamp": ts_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
                         "author_channel_id": renderer.get("authorExternalChannelId", ""),
-                        "display_name":      renderer.get("authorName", {}).get("simpleText", ""),
-                        "message_text":      parse_text(renderer.get("message", {}).get("runs", [])),
-                        "message_type":      "textMessageEvent",
+                        "display_name": renderer.get("authorName", {}).get("simpleText", ""),
+                        "message_text": message_text,
+                        "message_type": "textMessageEvent",
                         "super_chat_amount": "",
-                        "video_offset_sec":  offset_sec,
+                        "video_offset_sec": offset_sec,
                     })
                     continue
 
-                # --- Super Chat (paid message) ---
                 renderer = item.get("liveChatPaidMessageRenderer")
                 if renderer:
                     ts_usec = int(renderer.get("timestampUsec", 0) or 0)
-                    ts_dt   = datetime.fromtimestamp(ts_usec / 1_000_000, tz=timezone.utc)
-                    amount  = renderer.get("purchaseAmountText", {}).get("simpleText", "")
+                    ts_dt = datetime.fromtimestamp(ts_usec / 1_000_000, tz=timezone.utc)
+                    amount = renderer.get("purchaseAmountText", {}).get("simpleText", "")
+                    message_text = parse_text(renderer.get("message", {}).get("runs", []))
                     rows.append({
-                        "timestamp":         ts_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+                        "timestamp": ts_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
                         "author_channel_id": renderer.get("authorExternalChannelId", ""),
-                        "display_name":      renderer.get("authorName", {}).get("simpleText", ""),
-                        "message_text":      parse_text(renderer.get("message", {}).get("runs", [])),
-                        "message_type":      "superChatEvent",
+                        "display_name": renderer.get("authorName", {}).get("simpleText", ""),
+                        "message_text": message_text,
+                        "message_type": "superChatEvent",
                         "super_chat_amount": amount,
-                        "video_offset_sec":  offset_sec,
+                        "video_offset_sec": offset_sec,
                     })
 
     return rows
 
 
-def save_csv(rows: list[dict], video_id: str) -> Path:
-    CSV_DIR.mkdir(parents=True, exist_ok=True)
-    out_path = CSV_DIR / f"chat_{video_id}.csv"
+def save_csv_raw(rows: list[dict], video_id: str) -> Path:
+    """Write messages parsed from replay JSON without sentiment columns."""
+    CSV_RAW_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = CSV_RAW_DIR / f"chat_{video_id}.csv"
     fieldnames = [
         "timestamp", "author_channel_id", "display_name",
         "message_text", "message_type", "super_chat_amount", "video_offset_sec",
@@ -174,21 +175,27 @@ def save_csv(rows: list[dict], video_id: str) -> Path:
 
 
 def collect_one(video_id: str) -> Path:
-    """Download raw chat to json/, parse it, and save CSV to csv/. Returns CSV path."""
+    """
+    Download replay JSON, export csv/raw/, run sentiment enrichment → csv/coded/.
+    Returns path to the coded CSV.
+    """
     JSON_DIR.mkdir(parents=True, exist_ok=True)
     json_path = download_raw_chat(video_id, JSON_DIR)
-    rows      = parse_chat_json(json_path)
+    rows = parse_chat_json(json_path)
 
     if not rows:
         raise ValueError(f"No messages parsed from {video_id} — chat replay may be disabled.")
 
-    out_path = save_csv(rows, video_id)
+    raw_path = save_csv_raw(rows, video_id)
+    coded_path = enrich_raw_csv_file(raw_path, CSV_CODED_DIR / raw_path.name)
 
     super_chats = sum(1 for r in rows if r["message_type"] == "superChatEvent")
     print(f"  Parsed {len(rows):,} messages ({super_chats} Super Chats)")
-    rel = out_path.relative_to(HERE) if out_path.is_relative_to(HERE) else out_path
-    print(f"  Saved to: {rel}\n")
-    return out_path
+    rel_raw = raw_path.relative_to(HERE) if raw_path.is_relative_to(HERE) else raw_path
+    rel_coded = coded_path.relative_to(HERE) if coded_path.is_relative_to(HERE) else coded_path
+    print(f"  Raw CSV:   {rel_raw}")
+    print(f"  Coded CSV: {rel_coded}\n")
+    return coded_path
 
 
 def main() -> None:
