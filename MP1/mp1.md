@@ -45,4 +45,4 @@ The clearest readability choice was making Question 1 a horizontal bar chart rat
 | Notebook | `MP1/mp1.ipynb` |
 | Data | `MP1/chat_regular/*.csv` |
 | Static charts | `MP1/images/` (3 PNG + 3 SVG) |
-| Collection script (prior week) | `Week 5/A5/collect_vod_chat.py` |
+| Collection script | `MP1/scripts/collect_vod_chat.py` |
